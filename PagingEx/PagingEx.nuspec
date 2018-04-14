@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>PagingEx</id>
+    <version>1.0.0</version>
+    <title>PagingEx</title>
+    <authors>Tlaster</authors>
+    <owners>Tlaster</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <licenseUrl>https://github.com/Tlaster/PagingEx/blob/master/LICENSE.md</licenseUrl>
+    <projectUrl>https://github.com/Tlaster/PagingEx</projectUrl>
+    <description>Better frame navigation for UWP</description>
+  </metadata>
+  <files>
+    <file src="bin\Release\PagingEx.dll" target="lib\uap10.0\PagingEx.dll" />
+    <file src="bin\Release\PagingEx.pdb" target="lib\uap10.0\PagingEx.pdb" />
+  </files>
+</package>
