@@ -208,6 +208,30 @@ namespace PagingEx
         {
             if (Content is FrameworkElement element) element.IsHitTestVisible = false;
 
+            InvokeLifecycleBeforeContentChanged(navigationMode, currentPage, nextPage);
+
+            currentPage?.GetPage(this)?.PrepareConnectedAnimation();
+            
+            _pageStackManager.ChangeCurrentPage(nextPage, nextPageIndex);
+            OnCurrentPageChanged(currentPage?.Page, nextPage?.Page);
+            Navigating?.Invoke(this, EventArgs.Empty);
+
+            Content = nextPage?.GetPage(this).InternalPage;
+
+            InvokeLifecycleAfterContentChanged(navigationMode, currentPage, nextPage);
+
+            nextPage?.GetPage(this)?.UsingConnectedAnimation();
+
+            if (Content is FrameworkElement frameworkElement) frameworkElement.IsHitTestVisible = true;
+
+            ReleasePage(currentPage);
+
+            Navigated?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void InvokeLifecycleBeforeContentChanged(NavigationMode navigationMode, PageModel currentPage,
+            PageModel nextPage)
+        {
             switch (navigationMode)
             {
                 case NavigationMode.New:
@@ -225,13 +249,11 @@ namespace PagingEx
                 default:
                     throw new ArgumentOutOfRangeException(nameof(navigationMode), navigationMode, null);
             }
-            currentPage?.GetPage(this)?.PrepareConnectedAnimation();
-            _pageStackManager.ChangeCurrentPage(nextPage, nextPageIndex);
-            OnCurrentPageChanged(currentPage?.Page, nextPage?.Page);
-            Navigating?.Invoke(this, EventArgs.Empty);
+        }
 
-            Content = nextPage?.GetPage(this).InternalPage;
-
+        private void InvokeLifecycleAfterContentChanged(NavigationMode navigationMode, PageModel currentPage,
+            PageModel nextPage)
+        {
             switch (navigationMode)
             {
                 case NavigationMode.New:
@@ -249,16 +271,9 @@ namespace PagingEx
                 default:
                     throw new ArgumentOutOfRangeException(nameof(navigationMode), navigationMode, null);
             }
-            nextPage?.GetPage(this)?.UsingConnectedAnimation();
-
-            if (Content is FrameworkElement frameworkElement) frameworkElement.IsHitTestVisible = true;
-
-            ReleasePageIfNecessary(currentPage);
-
-            Navigated?.Invoke(this, EventArgs.Empty);
         }
 
-        private void ReleasePageIfNecessary(PageModel page)
+        private void ReleasePage(PageModel page)
         {
             if (page != null && (page.Page.NavigationCacheMode == NavigationCacheMode.Disabled || DisableCache))
                 page.ReleasePage();

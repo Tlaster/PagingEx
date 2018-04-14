@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace PagingEx
 {
@@ -9,7 +10,7 @@ namespace PagingEx
 
         public int CurrentIndex { get; private set; } = -1;
 
-        public PageModel CurrentPage => _pages.Count > 0 ? _pages[CurrentIndex] : null;
+        public PageModel CurrentPage => _pages.ElementAtOrDefault(CurrentIndex);
 
         public bool CanGoBack => CurrentIndex > 0;
 

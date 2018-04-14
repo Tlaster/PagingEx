@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Linq;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -21,7 +20,6 @@ namespace PagingEx
             DependencyProperty.Register(nameof(BottomAppBar), typeof(AppBar), typeof(PageEx),
                 new PropertyMetadata(default(AppBar), (o, args) => ((PageEx) o).OnUpdateBottomAppBar()));
 
-        private FrameEx _frame;
         private Page _internalPage;
         private bool _isLoaded;
 
@@ -34,6 +32,8 @@ namespace PagingEx
             HorizontalAlignment = HorizontalAlignment.Stretch;
             VerticalAlignment = VerticalAlignment.Stretch;
         }
+
+        protected FrameEx Frame { get; private set; }
 
         public bool IsBusy
         {
@@ -59,7 +59,7 @@ namespace PagingEx
 
         protected internal virtual void SetFrame(FrameEx frameEx)
         {
-            _frame = frameEx;
+            Frame = frameEx;
         }
 
         protected override void OnApplyTemplate()
@@ -112,15 +112,15 @@ namespace PagingEx
 
         protected void Finish()
         {
-            if (_frame.CanGoBack)
-                _frame.GoBack();
+            if (Frame.CanGoBack)
+                Frame.GoBack();
             else
                 Window.Current.Close();
         }
 
         protected void OpenPage(Type type, object paramter = null)
         {
-            _frame.Navigate(type, paramter);
+            Frame.Navigate(type, paramter);
         }
 
         protected internal virtual void OnCreate(object paramter)
