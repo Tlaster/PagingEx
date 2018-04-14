@@ -114,7 +114,7 @@
     <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Handlers\PageStackManager.cs" />
+    <Compile Include="PageStackManager.cs" />
     <Compile Include="FrameEx.cs" />
     <Compile Include="PageEx.cs" />
     <Compile Include="PageModel.cs" />

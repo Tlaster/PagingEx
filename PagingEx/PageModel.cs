@@ -32,7 +32,7 @@ namespace PagingEx
                     $"The base type is not an {nameof(Page)}. Change the base type from Page to {nameof(Page)}. ");
             }
 
-            page.SetFrame(frameEx, PageKey);
+            page.SetFrame(frameEx);
             page.OnCreate(Parameter);
             Page = page;
 

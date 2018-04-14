@@ -13,5 +13,12 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+        <Setter Property="ContentTransitions">
+            <Setter.Value>
+                <TransitionCollection>
+                    <ContentThemeTransition/>
+                </TransitionCollection>
+            </Setter.Value>
+        </Setter>
     </Style>
 </ResourceDictionary>

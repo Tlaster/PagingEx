@@ -5,22 +5,24 @@ using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Media.Animation;
 using Windows.UI.Xaml.Navigation;
-using PagingEx.Handlers;
 
 namespace PagingEx
 {
     public class FrameEx : Control, INavigate
     {
+        public event EventHandler<EventArgs> Navigated;
+        public event EventHandler<EventArgs> Navigating;
+
         public static readonly DependencyProperty ContentProperty = DependencyProperty.Register(
             nameof(Content), typeof(object), typeof(FrameEx), new PropertyMetadata(default));
 
         public static readonly DependencyProperty ContentTransitionsProperty = DependencyProperty.Register(
             nameof(ContentTransitions), typeof(TransitionCollection), typeof(FrameEx),
-            new PropertyMetadata(default(TransitionCollection)));
+            new PropertyMetadata(default));
 
         public static readonly DependencyProperty SourcePageTypeProperty = DependencyProperty.Register(
             nameof(SourcePageType), typeof(Type), typeof(FrameEx),
-            new PropertyMetadata(default(Type), OnSourcePageTypeChanged));
+            new PropertyMetadata(default, OnSourcePageTypeChanged));
 
         private readonly PageStackManager _pageStackManager = new PageStackManager();
 
@@ -31,9 +33,15 @@ namespace PagingEx
 
             HorizontalAlignment = HorizontalAlignment.Stretch;
             VerticalAlignment = VerticalAlignment.Stretch;
-
-            Loaded += delegate { Window.Current.VisibilityChanged += OnVisibilityChanged; };
-            Unloaded += delegate { Window.Current.VisibilityChanged -= OnVisibilityChanged; };
+            
+            Loaded += delegate
+            {
+                Window.Current.VisibilityChanged += OnVisibilityChanged;
+            };
+            Unloaded += delegate
+            {
+                Window.Current.VisibilityChanged -= OnVisibilityChanged;
+            };
 
             DefaultStyleKey = typeof(FrameEx);
         }
@@ -42,22 +50,12 @@ namespace PagingEx
 
         public ContentPresenter InternalFrame { get; private set; }
 
-        public bool AutomaticBackButtonHandling
-        {
-            get => _pageStackManager.AutomaticBackButtonHandling;
-            set => _pageStackManager.AutomaticBackButtonHandling = value;
-        }
-
-        public bool IsFirstPage => _pageStackManager.IsFirstPage;
-
         private PageModel CurrentPageModel => _pageStackManager?.CurrentPage;
 
-        public PageEx CurrentPage => _pageStackManager?.CurrentPage?.Page;
+        public PageEx CurrentPage => _pageStackManager?.CurrentPage?.GetPage(this);
 
         public bool CanGoBack => _pageStackManager.CanGoBack;
-
-        //public bool CanGoForward => _pageStackManager.CanGoForward;
-
+        
         public int BackStackDepth => _pageStackManager.BackStackDepth;
 
         public bool IsNavigating { get; private set; }
@@ -67,7 +65,6 @@ namespace PagingEx
             get => GetValue(ContentProperty);
             set => SetValue(ContentProperty, value);
         }
-
 
         public TransitionCollection ContentTransitions
         {
@@ -80,14 +77,7 @@ namespace PagingEx
             get => (Type) GetValue(SourcePageTypeProperty);
             set => SetValue(SourcePageTypeProperty, value);
         }
-
-
-
-        private PageModel GetNearestPageOfTypeInBackStack(Type pageType)
-        {
-            return _pageStackManager.GetNearestPageOfTypeInBackStack(pageType);
-        }
-
+        
         public bool GoHome()
         {
             return GoBackTo(0);
@@ -125,7 +115,6 @@ namespace PagingEx
             });
         }
 
-
         public void Initialize(Type homePageType, object parameter = null)
         {
             Navigate(homePageType, parameter);
@@ -136,8 +125,7 @@ namespace PagingEx
             return Navigate(sourcePageType, null);
         }
 
-
-        public bool Navigate(Type pageType, object parameter = null)
+        public bool Navigate(Type pageType, object parameter)
         {
             var newPage = new PageModel(pageType, parameter);
             return NavigateWithMode(newPage, NavigationMode.New);
@@ -146,7 +134,7 @@ namespace PagingEx
         private static void OnSourcePageTypeChanged(DependencyObject dependencyObject,
             DependencyPropertyChangedEventArgs e)
         {
-            (dependencyObject as FrameEx).OnSourcePageTypeChanged(e.NewValue as Type);
+            (dependencyObject as FrameEx)?.OnSourcePageTypeChanged(e.NewValue as Type);
         }
 
         private void OnSourcePageTypeChanged(Type newValue)
@@ -237,9 +225,10 @@ namespace PagingEx
                 default:
                     throw new ArgumentOutOfRangeException(nameof(navigationMode), navigationMode, null);
             }
-
+            currentPage?.GetPage(this)?.PrepareConnectedAnimation();
             _pageStackManager.ChangeCurrentPage(nextPage, nextPageIndex);
             OnCurrentPageChanged(currentPage?.Page, nextPage?.Page);
+            Navigating?.Invoke(this, EventArgs.Empty);
 
             Content = nextPage?.GetPage(this).InternalPage;
 
@@ -260,10 +249,13 @@ namespace PagingEx
                 default:
                     throw new ArgumentOutOfRangeException(nameof(navigationMode), navigationMode, null);
             }
+            nextPage?.GetPage(this)?.UsingConnectedAnimation();
 
             if (Content is FrameworkElement frameworkElement) frameworkElement.IsHitTestVisible = true;
 
             ReleasePageIfNecessary(currentPage);
+
+            Navigated?.Invoke(this, EventArgs.Empty);
         }
 
         private void ReleasePageIfNecessary(PageModel page)
@@ -278,7 +270,14 @@ namespace PagingEx
 
         private void OnVisibilityChanged(object sender, VisibilityChangedEventArgs args)
         {
-            CurrentPageModel?.GetPage(this).OnVisibilityChanged(args);
+            if (args.Visible)
+            {
+                CurrentPage?.OnResume();
+            }
+            else
+            {
+                CurrentPage?.OnPause();
+            }
         }
     }
 }

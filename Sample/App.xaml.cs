@@ -41,17 +41,13 @@ namespace Sample
         /// <param name="e">有关启动请求和过程的详细信息。</param>
         protected override void OnLaunched(LaunchActivatedEventArgs e)
         {
-            var rootFrame = Window.Current.Content as FrameEx;
-
             // 不要在窗口已包含内容时重复应用程序初始化，
             // 只需确保窗口处于活动状态
-            if (rootFrame == null)
+            if (!(Window.Current.Content is FrameEx rootFrame))
             {
                 // 创建要充当导航上下文的框架，并导航到第一页
-                rootFrame = new FrameEx
-                {
-                    AutomaticBackButtonHandling = true
-                };
+                rootFrame = new FrameEx();
+                rootFrame.Navigated += RootFrameOnNavigated;
                 SystemNavigationManager.GetForCurrentView().BackRequested += (sender, args) => rootFrame.GoBack();
 
                 //rootFrame.NavigationFailed += OnNavigationFailed;
@@ -76,6 +72,20 @@ namespace Sample
                 }
                 // 确保当前窗口处于活动状态
                 Window.Current.Activate();
+            }
+        }
+
+        private void RootFrameOnNavigated(object sender, EventArgs e)
+        {
+            if (sender is FrameEx frame && frame.CanGoBack)
+            {
+                SystemNavigationManager.GetForCurrentView().AppViewBackButtonVisibility =
+                    AppViewBackButtonVisibility.Visible;
+            }
+            else
+            {
+                SystemNavigationManager.GetForCurrentView().AppViewBackButtonVisibility =
+                    AppViewBackButtonVisibility.Collapsed;
             }
         }
 

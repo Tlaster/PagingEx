@@ -1,9 +1,9 @@
+using System;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
-using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
+using Windows.UI.Xaml.Media.Animation;
 using Windows.UI.Xaml.Navigation;
 
 namespace PagingEx
@@ -21,6 +21,7 @@ namespace PagingEx
             DependencyProperty.Register(nameof(BottomAppBar), typeof(AppBar), typeof(PageEx),
                 new PropertyMetadata(default(AppBar), (o, args) => ((PageEx) o).OnUpdateBottomAppBar()));
 
+        private FrameEx _frame;
         private Page _internalPage;
         private bool _isLoaded;
 
@@ -40,8 +41,6 @@ namespace PagingEx
             set => SetValue(IsBusyProperty, value);
         }
 
-        public FrameEx Frame { get; private set; }
-
         public Page InternalPage => _internalPage ?? (_internalPage = new Page {Content = this});
 
         public NavigationCacheMode NavigationCacheMode { get; set; }
@@ -58,25 +57,9 @@ namespace PagingEx
             set => SetValue(BottomAppBarProperty, value);
         }
 
-        protected internal virtual void SetFrame(FrameEx frameEx, string pageKey)
+        protected internal virtual void SetFrame(FrameEx frameEx)
         {
-            Frame = frameEx;
-        }
-
-        protected internal virtual void OnKeyActivated(AcceleratorKeyEventArgs args)
-        {
-            // Must be empty
-        }
-
-
-        protected internal virtual void OnKeyUp(AcceleratorKeyEventArgs args)
-        {
-            // Must be empty
-        }
-
-        protected internal virtual void OnVisibilityChanged(VisibilityChangedEventArgs args)
-        {
-            // Must be empty
+            _frame = frameEx;
         }
 
         protected override void OnApplyTemplate()
@@ -86,14 +69,20 @@ namespace PagingEx
             Unloaded += OnUnloaded;
         }
 
-
-        private void OnLoaded(object sender, RoutedEventArgs routedEventArgs)
+        protected virtual void OnLoaded(object sender, RoutedEventArgs routedEventArgs)
         {
             _isLoaded = true;
 
             OnUpdateTopAppBar();
             OnUpdateBottomAppBar();
             OnDataContextChanged();
+        }
+
+        protected virtual void OnUnloaded(object sender, RoutedEventArgs routedEventArgs)
+        {
+            if (InternalPage.TopAppBar != null) InternalPage.TopAppBar = null;
+
+            if (InternalPage.BottomAppBar != null) InternalPage.BottomAppBar = null;
         }
 
         private void OnDataContextChanged()
@@ -121,52 +110,67 @@ namespace PagingEx
             }
         }
 
-        private void OnUnloaded(object sender, RoutedEventArgs routedEventArgs)
+        protected void Finish()
         {
-            if (InternalPage.TopAppBar != null) InternalPage.TopAppBar = null;
+            if (_frame.CanGoBack)
+                _frame.GoBack();
+            else
+                Window.Current.Close();
+        }
 
-            if (InternalPage.BottomAppBar != null) InternalPage.BottomAppBar = null;
+        protected void OpenPage(Type type, object paramter = null)
+        {
+            _frame.Navigate(type, paramter);
         }
 
         protected internal virtual void OnCreate(object paramter)
         {
-            Debug.WriteLine($"{GetType().Name}: {nameof(OnCreate)}");
         }
 
         protected internal virtual void OnStart()
         {
-            Debug.WriteLine($"{GetType().Name}: {nameof(OnStart)}");
         }
 
         protected internal virtual void OnRestart()
         {
-            Debug.WriteLine($"{GetType().Name}: {nameof(OnRestart)}");
         }
 
         protected internal virtual void OnStop()
         {
-            Debug.WriteLine($"{GetType().Name}: {nameof(OnStop)}");
         }
 
         protected internal virtual void OnResume()
         {
-            Debug.WriteLine($"{GetType().Name}: {nameof(OnResume)}");
         }
 
         protected internal virtual void OnPause()
         {
-            Debug.WriteLine($"{GetType().Name}: {nameof(OnPause)}");
         }
 
         protected internal virtual void OnClose()
         {
-            Debug.WriteLine($"{GetType().Name}: {nameof(OnClose)}");
         }
 
         protected internal virtual void OnDestory()
         {
-            Debug.WriteLine($"{GetType().Name}: {nameof(OnDestory)}");
         }
 
+        protected virtual void OnPrepareConnectedAnimation(ConnectedAnimationService service)
+        {
+        }
+
+        protected virtual void OnUsingConnectedAnimation(ConnectedAnimationService service)
+        {
+        }
+
+        internal void PrepareConnectedAnimation()
+        {
+            OnPrepareConnectedAnimation(ConnectedAnimationService.GetForCurrentView());
+        }
+
+        internal void UsingConnectedAnimation()
+        {
+            OnUsingConnectedAnimation(ConnectedAnimationService.GetForCurrentView());
+        }
     }
 }

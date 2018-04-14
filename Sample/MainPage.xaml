@@ -8,7 +8,9 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
-        <Button Content="Click!" HorizontalAlignment="Center" VerticalAlignment="Center" Click="ButtonBase_OnClick"/>
-    </Grid>
+    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <TextBlock Text="Page 1" x:Name="TextBlock"/>
+        <TextBox/>
+        <Button Content="Click!" Click="ButtonBase_OnClick"/>
+    </StackPanel>
 </pagingex:PageEx>
