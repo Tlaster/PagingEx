@@ -12,6 +12,8 @@
     <description>Better frame navigation for UWP</description>
   </metadata>
   <files>
+    <file src="bin\Release\Themes\Generic.xbf" target="lib\uap10.0\Themes\Generic.xbf" />
+    <file src="bin\Release\PagingEx.pri" target="lib\uap10.0\PagingEx.pri" />
     <file src="bin\Release\PagingEx.dll" target="lib\uap10.0\PagingEx.dll" />
     <file src="bin\Release\PagingEx.pdb" target="lib\uap10.0\PagingEx.pdb" />
   </files>
