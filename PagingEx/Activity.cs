@@ -7,23 +7,23 @@ using Windows.UI.Xaml.Navigation;
 
 namespace PagingEx
 {
-    public class PageEx : ContentControl
+    public class Activity : ContentControl
     {
         public static readonly DependencyProperty IsBusyProperty = DependencyProperty.Register(
-            nameof(IsBusy), typeof(bool), typeof(PageEx), new PropertyMetadata(default));
+            nameof(IsBusy), typeof(bool), typeof(Activity), new PropertyMetadata(default));
 
         public static readonly DependencyProperty TopAppBarProperty =
-            DependencyProperty.Register(nameof(TopAppBar), typeof(AppBar), typeof(PageEx),
-                new PropertyMetadata(default(AppBar), (o, args) => ((PageEx) o).OnUpdateTopAppBar()));
+            DependencyProperty.Register(nameof(TopAppBar), typeof(AppBar), typeof(Activity),
+                new PropertyMetadata(default(AppBar), (o, args) => ((Activity) o).OnUpdateTopAppBar()));
 
         public static readonly DependencyProperty BottomAppBarProperty =
-            DependencyProperty.Register(nameof(BottomAppBar), typeof(AppBar), typeof(PageEx),
-                new PropertyMetadata(default(AppBar), (o, args) => ((PageEx) o).OnUpdateBottomAppBar()));
+            DependencyProperty.Register(nameof(BottomAppBar), typeof(AppBar), typeof(Activity),
+                new PropertyMetadata(default(AppBar), (o, args) => ((Activity) o).OnUpdateBottomAppBar()));
 
         private Page _internalPage;
         private bool _isLoaded;
 
-        public PageEx()
+        public Activity()
         {
             NavigationCacheMode = NavigationCacheMode.Required;
 
@@ -34,6 +34,8 @@ namespace PagingEx
         }
 
         protected FrameEx Frame { get; private set; }
+
+        public IActivityTransition ActivityTransition { get; set; }
 
         public bool IsBusy
         {
@@ -118,12 +120,12 @@ namespace PagingEx
                 Window.Current.Close();
         }
 
-        protected void OpenPage(Type type, object paramter = null)
+        protected void OpenPage(Type type, object parameter = null)
         {
-            Frame.Navigate(type, paramter);
+            Frame.Navigate(type, parameter);
         }
 
-        protected internal virtual void OnCreate(object paramter)
+        protected internal virtual void OnCreate(object parameter)
         {
         }
 
@@ -151,7 +153,7 @@ namespace PagingEx
         {
         }
 
-        protected internal virtual void OnDestory()
+        protected internal virtual void OnDestroy()
         {
         }
 

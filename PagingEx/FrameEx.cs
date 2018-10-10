@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -20,11 +22,11 @@ namespace PagingEx
             nameof(ContentTransitions), typeof(TransitionCollection), typeof(FrameEx),
             new PropertyMetadata(default));
 
-        public static readonly DependencyProperty SourcePageTypeProperty = DependencyProperty.Register(
-            nameof(SourcePageType), typeof(Type), typeof(FrameEx),
-            new PropertyMetadata(default, OnSourcePageTypeChanged));
+        public static readonly DependencyProperty SourceActivityTypeProperty = DependencyProperty.Register(
+            nameof(SourceActivityType), typeof(Type), typeof(FrameEx),
+            new PropertyMetadata(default, OnSourceActivityTypeChanged));
 
-        private readonly PageStackManager _pageStackManager = new PageStackManager();
+        private readonly ActivityStackManager _activityStackManager = new ActivityStackManager();
 
         public FrameEx()
         {
@@ -50,15 +52,40 @@ namespace PagingEx
 
         public ContentPresenter InternalFrame { get; private set; }
 
-        private PageModel CurrentPageModel => _pageStackManager?.CurrentPage;
+        private ActivityModel CurrentActivityModel => _activityStackManager?.CurrentActivity;
 
-        public PageEx CurrentPage => _pageStackManager?.CurrentPage?.GetPage(this);
+        public Activity CurrentActivity => _activityStackManager?.CurrentActivity?.GetActivity(this);
 
-        public bool CanGoBack => _pageStackManager.CanGoBack;
+        public bool CanGoBack => _activityStackManager.CanGoBack;
         
-        public int BackStackDepth => _pageStackManager.BackStackDepth;
+        public int BackStackDepth => _activityStackManager.BackStackDepth;
 
         public bool IsNavigating { get; private set; }
+
+        public IActivityTransition ActivityTransition { get; set; }
+
+        private IActivityTransition ActualActivityTransition
+        {
+            get
+            {
+                if (ContentTransitions != null)
+                    return null;
+
+                var currentActivity = CurrentActivity;
+                return currentActivity?.ActivityTransition != null ? CurrentActivity.ActivityTransition : ActivityTransition;
+            }
+        }
+
+        private Grid ContentRoot
+        {
+            get
+            {
+                if (Content == null)
+                    Content = new Grid();
+                return (Grid)Content;
+            }
+        }
+
 
         public object Content
         {
@@ -72,79 +99,80 @@ namespace PagingEx
             set => SetValue(ContentTransitionsProperty, value);
         }
 
-        public Type SourcePageType
+        public Type SourceActivityType
         {
-            get => (Type) GetValue(SourcePageTypeProperty);
-            set => SetValue(SourcePageTypeProperty, value);
+            get => (Type) GetValue(SourceActivityTypeProperty);
+            set => SetValue(SourceActivityTypeProperty, value);
         }
         
-        public bool GoHome()
+        public Task<bool> GoHome()
         {
             return GoBackTo(0);
         }
 
-        public bool GoBackTo(int newPageIndex)
+        public async Task<bool> GoBackTo(int index)
         {
-            if (!_pageStackManager.CanGoBackTo(newPageIndex)) return false;
+            if (!_activityStackManager.CanGoBackTo(index)) return false;
 
-            return RunNavigationWithCheck(() =>
+            return await RunNavigationWithCheck(async () =>
             {
-                var nextPage = _pageStackManager.GetPageAt(newPageIndex);
-                var currentPage = CurrentPageModel;
+                var nextActivity = _activityStackManager.GetActivityAt(index);
+                var currentActivity = CurrentActivityModel;
 
 
-                NavigateImpl(NavigationMode.Back, currentPage, nextPage, newPageIndex);
+                await NavigateImplAsync(NavigationMode.Back, currentActivity, nextActivity, index);
 
-                _pageStackManager.ClearForwardStack();
+                _activityStackManager.ClearForwardStack();
 
                 return true;
             });
         }
 
-        public bool RemovePageFromStackAt(int pageIndex)
+        public bool RemoveActivityAt(int index)
         {
-            return _pageStackManager.RemovePageFromStackAt(pageIndex);
+            return _activityStackManager.RemoveActivityAt(index);
         }
 
-        public bool GoBack()
+        public Task<bool> GoBack()
         {
-            return RunNavigationWithCheck(() =>
+            return RunNavigationWithCheck(async () =>
             {
-                GoForwardOrBack(NavigationMode.Back);
+                await GoForwardOrBack(NavigationMode.Back);
                 return true;
             });
         }
 
-        public void Initialize(Type homePageType, object parameter = null)
+        public void Initialize(Type homeActivityType, object parameter = null)
         {
-            Navigate(homePageType, parameter);
+            Navigate(homeActivityType, parameter);
         }
         
-        public bool Navigate(Type sourcePageType)
+        public bool Navigate(Type sourceActivityType)
         {
-            return Navigate(sourcePageType, null);
+            Navigate(sourceActivityType, null);
+            return true;
         }
 
-        public bool Navigate(Type pageType, object parameter)
+        public Task<bool> Navigate(Type activityType, object parameter)
         {
-            var newPage = new PageModel(pageType, parameter);
-            return NavigateWithMode(newPage, NavigationMode.New);
+            var newActivity = new ActivityModel(activityType, parameter);
+            return NavigateWithMode(newActivity, NavigationMode.New);
         }
 
-        private static void OnSourcePageTypeChanged(DependencyObject dependencyObject,
+        private static void OnSourceActivityTypeChanged(DependencyObject dependencyObject,
             DependencyPropertyChangedEventArgs e)
         {
-            (dependencyObject as FrameEx)?.OnSourcePageTypeChanged(e.NewValue as Type);
+            (dependencyObject as FrameEx)?.OnSourceActivityTypeChanged(e.NewValue as Type);
         }
 
-        private void OnSourcePageTypeChanged(Type newValue)
+        private void OnSourceActivityTypeChanged(Type newValue)
         {
             Navigate(newValue);
         }
 
         public void ClearBackStack()
         {
-            _pageStackManager.ClearBackStack();
+            _activityStackManager.ClearBackStack();
         }
 
         protected override void OnApplyTemplate()
@@ -153,29 +181,29 @@ namespace PagingEx
             InternalFrame = (ContentPresenter) GetTemplateChild(nameof(FrameEx));
         }
 
-        private bool NavigateWithMode(PageModel newPage, NavigationMode navigationMode)
+        private Task<bool> NavigateWithMode(ActivityModel newActivity, NavigationMode navigationMode)
         {
-            return RunNavigationWithCheck(() =>
+            return RunNavigationWithCheck(async () =>
             {
-                var currentPage = CurrentPageModel;
+                var currentActivity = CurrentActivityModel;
 
-                _pageStackManager.ClearForwardStack();
+                _activityStackManager.ClearForwardStack();
 
-                NavigateImpl(navigationMode, currentPage, newPage,
-                    _pageStackManager.CurrentIndex + 1);
+                await NavigateImplAsync(navigationMode, currentActivity, newActivity,
+                    _activityStackManager.CurrentIndex + 1);
 
                 return true;
             });
         }
 
-        private bool RunNavigationWithCheck(Func<bool> task)
+        private async Task<bool> RunNavigationWithCheck(Func<Task<bool>> task)
         {
             if (IsNavigating) return false;
 
             try
             {
                 IsNavigating = true;
-                return task();
+                return await task();
             }
             finally
             {
@@ -184,18 +212,18 @@ namespace PagingEx
         }
 
 
-        private void GoForwardOrBack(NavigationMode navigationMode)
+        private async Task GoForwardOrBack(NavigationMode navigationMode)
         {
             if (CanGoBack)
             {
-                var currentPage = CurrentPageModel;
-                var nextPageIndex =
-                    _pageStackManager.CurrentIndex - 1;
-                var nextPage = _pageStackManager.Pages[nextPageIndex];
+                var currentActivity = CurrentActivityModel;
+                var nextActivityIndex =
+                    _activityStackManager.CurrentIndex - 1;
+                var nextActivity = _activityStackManager.Activities[nextActivityIndex];
 
-                NavigateImpl(navigationMode, currentPage, nextPage, nextPageIndex);
+                await NavigateImplAsync(navigationMode, currentActivity, nextActivity, nextActivityIndex);
 
-                _pageStackManager.ClearForwardStack();
+                _activityStackManager.ClearForwardStack();
             }
             else
             {
@@ -203,44 +231,103 @@ namespace PagingEx
             }
         }
 
-        private void NavigateImpl(NavigationMode navigationMode,
-            PageModel currentPage, PageModel nextPage, int nextPageIndex)
+        private async Task NavigateImplAsync(NavigationMode navigationMode,
+            ActivityModel currentActivity, ActivityModel nextActivity, int nextIndex)
         {
             if (Content is FrameworkElement element) element.IsHitTestVisible = false;
 
-            InvokeLifecycleBeforeContentChanged(navigationMode, currentPage, nextPage);
-
-            currentPage?.GetPage(this)?.PrepareConnectedAnimation();
+            InvokeLifecycleBeforeContentChanged(navigationMode, currentActivity, nextActivity);
             
-            _pageStackManager.ChangeCurrentPage(nextPage, nextPageIndex);
-            OnCurrentPageChanged(currentPage?.Page, nextPage?.Page);
+            _activityStackManager.ChangeCurrentActivity(nextActivity, nextIndex);
+
+            OnCurrentActivityChanged(currentActivity?.Activity, nextActivity?.Activity);
+
             Navigating?.Invoke(this, EventArgs.Empty);
 
-            Content = nextPage?.GetPage(this).InternalPage;
-
-            InvokeLifecycleAfterContentChanged(navigationMode, currentPage, nextPage);
-
-            nextPage?.GetPage(this)?.UsingConnectedAnimation();
+            await UpdateContent(navigationMode, currentActivity, nextActivity);
+            
+            InvokeLifecycleAfterContentChanged(navigationMode, currentActivity, nextActivity);
 
             if (Content is FrameworkElement frameworkElement) frameworkElement.IsHitTestVisible = true;
 
-            ReleasePage(currentPage);
+            ReleaseActivity(currentActivity);
 
             Navigated?.Invoke(this, EventArgs.Empty);
         }
+        
+        private async Task UpdateContent(NavigationMode navigationMode, ActivityModel currentActivity, ActivityModel nextActivity)
+        {
+            var animation = ActualActivityTransition;
+            var current = currentActivity?.GetActivity(this)?.InternalPage;
+            var next = nextActivity?.GetActivity(this)?.InternalPage;
+            currentActivity?.GetActivity(this)?.PrepareConnectedAnimation();
+            if (animation != null)
+            {
+                switch (animation.InsertionMode)
+                {
+                    case ActivityInsertionMode.NewAbove:
+                        switch (navigationMode)
+                        {
+                            case NavigationMode.New:
+                                ContentRoot.Children.Add(next);
+                                nextActivity?.GetActivity(this)?.UsingConnectedAnimation();
+                                await animation.OnStart(next, current);
+                                break;
+                            case NavigationMode.Back:
+                                ContentRoot.Children.Insert(0, next);
+                                nextActivity?.GetActivity(this)?.UsingConnectedAnimation();
+                                await animation.OnClose(current, next);
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException(nameof(navigationMode), navigationMode, null);
+                        }
+                        break;
+                    case ActivityInsertionMode.NewBelow:
+                        switch (navigationMode)
+                        {
+                            case NavigationMode.New:
+                                ContentRoot.Children.Insert(0, next);
+                                nextActivity?.GetActivity(this)?.UsingConnectedAnimation();
+                                await animation.OnStart(next, current);
+                                break;
+                            case NavigationMode.Back:
+                                ContentRoot.Children.Add(next);
+                                nextActivity?.GetActivity(this)?.UsingConnectedAnimation();
+                                await animation.OnClose(current, next);
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException(nameof(navigationMode), navigationMode, null);
+                        }
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
 
-        private void InvokeLifecycleBeforeContentChanged(NavigationMode navigationMode, PageModel currentPage,
-            PageModel nextPage)
+                ContentRoot.Children.Remove(current);
+            }
+            else
+            {
+                if (current != null)
+                {
+                    ContentRoot.Children.Remove(current);
+                }
+
+                ContentRoot.Children.Add(next);
+            }
+        }
+
+        private void InvokeLifecycleBeforeContentChanged(NavigationMode navigationMode, ActivityModel currentActivity,
+            ActivityModel nextActivity)
         {
             switch (navigationMode)
             {
                 case NavigationMode.New:
-                    currentPage?.GetPage(this)?.OnPause();
-                    nextPage?.GetPage(this)?.OnStart();
+                    currentActivity?.GetActivity(this)?.OnPause();
+                    nextActivity?.GetActivity(this)?.OnStart();
                     break;
                 case NavigationMode.Back:
-                    currentPage?.GetPage(this)?.OnClose();
-                    nextPage?.GetPage(this).OnRestart();
+                    currentActivity?.GetActivity(this)?.OnClose();
+                    nextActivity?.GetActivity(this).OnRestart();
                     break;
                 case NavigationMode.Forward:
                     break;
@@ -251,18 +338,18 @@ namespace PagingEx
             }
         }
 
-        private void InvokeLifecycleAfterContentChanged(NavigationMode navigationMode, PageModel currentPage,
-            PageModel nextPage)
+        private void InvokeLifecycleAfterContentChanged(NavigationMode navigationMode, ActivityModel currentActivity,
+            ActivityModel nextActivity)
         {
             switch (navigationMode)
             {
                 case NavigationMode.New:
-                    currentPage?.GetPage(this)?.OnStop();
-                    nextPage?.GetPage(this)?.OnResume();
+                    currentActivity?.GetActivity(this)?.OnStop();
+                    nextActivity?.GetActivity(this)?.OnResume();
                     break;
                 case NavigationMode.Back:
-                    currentPage?.GetPage(this)?.OnDestory();
-                    nextPage?.GetPage(this).OnResume();
+                    currentActivity?.GetActivity(this)?.OnDestroy();
+                    nextActivity?.GetActivity(this).OnResume();
                     break;
                 case NavigationMode.Forward:
                     break;
@@ -273,13 +360,13 @@ namespace PagingEx
             }
         }
 
-        private void ReleasePage(PageModel page)
+        private void ReleaseActivity(ActivityModel activity)
         {
-            if (page != null && (page.Page.NavigationCacheMode == NavigationCacheMode.Disabled || DisableCache))
-                page.ReleasePage();
+            if (activity != null && (activity.Activity.NavigationCacheMode == NavigationCacheMode.Disabled || DisableCache))
+                activity.Release();
         }
 
-        protected virtual void OnCurrentPageChanged(PageEx currentPageEx, PageEx newPageEx)
+        protected virtual void OnCurrentActivityChanged(Activity currentActivity, Activity newActivity)
         {
         }
 
@@ -287,11 +374,11 @@ namespace PagingEx
         {
             if (args.Visible)
             {
-                CurrentPage?.OnResume();
+                CurrentActivity?.OnResume();
             }
             else
             {
-                CurrentPage?.OnPause();
+                CurrentActivity?.OnPause();
             }
         }
     }

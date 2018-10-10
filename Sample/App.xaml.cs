@@ -46,7 +46,10 @@ namespace Sample
             if (!(Window.Current.Content is FrameEx rootFrame))
             {
                 // 创建要充当导航上下文的框架，并导航到第一页
-                rootFrame = new FrameEx();
+                rootFrame = new FrameEx
+                {
+                    ActivityTransition = new AlphaAnimation()
+                };
                 rootFrame.Navigated += RootFrameOnNavigated;
                 SystemNavigationManager.GetForCurrentView().BackRequested += (sender, args) => rootFrame.GoBack();
 

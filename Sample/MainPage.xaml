@@ -1,4 +1,4 @@
-﻿<pagingex:PageEx
+﻿<pagingex:Activity
     xmlns:pagingex="using:PagingEx"
     x:Class="Sample.MainPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -13,4 +13,4 @@
         <TextBox/>
         <Button Content="Click!" Click="ButtonBase_OnClick"/>
     </StackPanel>
-</pagingex:PageEx>
+</pagingex:Activity>

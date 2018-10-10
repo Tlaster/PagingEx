@@ -11,7 +11,7 @@
     <AssemblyName>PagingEx</AssemblyName>
     <DefaultLanguage>zh-CN</DefaultLanguage>
     <TargetPlatformIdentifier>UAP</TargetPlatformIdentifier>
-    <TargetPlatformVersion Condition=" '$(TargetPlatformVersion)' == '' ">10.0.17134.0</TargetPlatformVersion>
+    <TargetPlatformVersion Condition=" '$(TargetPlatformVersion)' == '' ">10.0.17763.0</TargetPlatformVersion>
     <TargetPlatformMinVersion>10.0.10586.0</TargetPlatformMinVersion>
     <MinimumVisualStudioVersion>14</MinimumVisualStudioVersion>
     <FileAlignment>512</FileAlignment>
@@ -114,10 +114,11 @@
     <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="PageStackManager.cs" />
+    <Compile Include="IActivityTransition.cs" />
+    <Compile Include="ActivityStackManager.cs" />
     <Compile Include="FrameEx.cs" />
-    <Compile Include="PageEx.cs" />
-    <Compile Include="PageModel.cs" />
+    <Compile Include="Activity.cs" />
+    <Compile Include="ActivityModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="Properties\PagingEx.rd.xml" />
   </ItemGroup>
