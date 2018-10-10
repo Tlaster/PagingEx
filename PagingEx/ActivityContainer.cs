@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Windows.UI.Core;
 using Windows.UI.Xaml;
@@ -15,7 +16,7 @@ namespace PagingEx
 
         public static readonly DependencyProperty ContentTransitionsProperty = DependencyProperty.Register(
             nameof(ContentTransitions), typeof(TransitionCollection), typeof(ActivityContainer),
-            new PropertyMetadata(default));
+            new PropertyMetadata(default, OnContentTransitionsChanged));
 
         public static readonly DependencyProperty SourceActivityTypeProperty = DependencyProperty.Register(
             nameof(SourceActivityType), typeof(Type), typeof(ActivityContainer),
@@ -76,7 +77,7 @@ namespace PagingEx
                 return (Grid) Content;
             }
         }
-        
+
         public object Content
         {
             get => GetValue(ContentProperty);
@@ -99,6 +100,16 @@ namespace PagingEx
         {
             Navigate(sourceActivityType, null);
             return true;
+        }
+
+        private static void OnContentTransitionsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            (d as ActivityContainer).OnContentTransitionsChanged(e.NewValue);
+        }
+
+        private void OnContentTransitionsChanged(object newValue)
+        {
+            ContentRoot.ChildrenTransitions = newValue as TransitionCollection;
         }
 
         public event EventHandler<EventArgs> Navigated;
@@ -227,7 +238,7 @@ namespace PagingEx
         private async Task NavigateImplAsync(NavigationMode navigationMode,
             ActivityModel currentActivity, ActivityModel nextActivity, int nextIndex)
         {
-            if (Content is FrameworkElement element) element.IsHitTestVisible = false;
+            ContentRoot.IsHitTestVisible = false;
 
             InvokeLifecycleBeforeContentChanged(navigationMode, currentActivity, nextActivity);
 
@@ -241,11 +252,27 @@ namespace PagingEx
 
             InvokeLifecycleAfterContentChanged(navigationMode, currentActivity, nextActivity);
 
-            if (Content is FrameworkElement frameworkElement) frameworkElement.IsHitTestVisible = true;
+            ContentRoot.IsHitTestVisible = true;
 
             ReleaseActivity(currentActivity);
 
             Navigated?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void AddActivityToContentRoot(NavigationMode navigationMode, ActivityInsertionMode insertionMode,
+            FrameworkElement next)
+        {
+            switch (navigationMode)
+            {
+                case NavigationMode.New when insertionMode == ActivityInsertionMode.NewAbove:
+                case NavigationMode.Back when insertionMode == ActivityInsertionMode.NewBelow:
+                    ContentRoot.Children.Add(next);
+                    break;
+                case NavigationMode.Back when insertionMode == ActivityInsertionMode.NewAbove:
+                case NavigationMode.New when insertionMode == ActivityInsertionMode.NewBelow:
+                    ContentRoot.Children.Insert(0, next);
+                    break;
+            }
         }
 
         private async Task UpdateContent(NavigationMode navigationMode, ActivityModel currentActivity,
@@ -257,54 +284,28 @@ namespace PagingEx
             currentActivity?.GetActivity(this)?.PrepareConnectedAnimation();
             if (animation != null)
             {
-                switch (animation.InsertionMode)
+                AddActivityToContentRoot(navigationMode, animation.InsertionMode, next);
+                nextActivity?.GetActivity(this)?.UsingConnectedAnimation();
+                switch (navigationMode)
                 {
-                    case ActivityInsertionMode.NewAbove:
-                        switch (navigationMode)
-                        {
-                            case NavigationMode.New:
-                                ContentRoot.Children.Add(next);
-                                nextActivity?.GetActivity(this)?.UsingConnectedAnimation();
-                                await animation.OnStart(next, current);
-                                break;
-                            case NavigationMode.Back:
-                                ContentRoot.Children.Insert(0, next);
-                                nextActivity?.GetActivity(this)?.UsingConnectedAnimation();
-                                await animation.OnClose(current, next);
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException(nameof(navigationMode), navigationMode, null);
-                        }
-
+                    case NavigationMode.New:
+                        await animation.OnStart(next, current);
                         break;
-                    case ActivityInsertionMode.NewBelow:
-                        switch (navigationMode)
-                        {
-                            case NavigationMode.New:
-                                ContentRoot.Children.Insert(0, next);
-                                nextActivity?.GetActivity(this)?.UsingConnectedAnimation();
-                                await animation.OnStart(next, current);
-                                break;
-                            case NavigationMode.Back:
-                                ContentRoot.Children.Add(next);
-                                nextActivity?.GetActivity(this)?.UsingConnectedAnimation();
-                                await animation.OnClose(current, next);
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException(nameof(navigationMode), navigationMode, null);
-                        }
-
+                    case NavigationMode.Back:
+                        await animation.OnClose(current, next);
                         break;
                     default:
-                        throw new ArgumentOutOfRangeException();
+                        throw new ArgumentOutOfRangeException(nameof(navigationMode), navigationMode, null);
                 }
 
                 ContentRoot.Children.Remove(current);
             }
             else
             {
-                if (current != null) ContentRoot.Children.Remove(current);
-                ContentRoot.Children.Add(next);
+                if (ContentRoot.Children.Any())
+                    ContentRoot.Children[0] = next;
+                else
+                    ContentRoot.Children.Add(next);
                 nextActivity?.GetActivity(this)?.UsingConnectedAnimation();
             }
         }
