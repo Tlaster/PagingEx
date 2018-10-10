@@ -304,8 +304,8 @@ namespace PagingEx
             else
             {
                 if (current != null) ContentRoot.Children.Remove(current);
-
                 ContentRoot.Children.Add(next);
+                nextActivity?.GetActivity(this)?.UsingConnectedAnimation();
             }
         }
 
