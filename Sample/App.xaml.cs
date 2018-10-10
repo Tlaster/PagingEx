@@ -43,10 +43,10 @@ namespace Sample
         {
             // 不要在窗口已包含内容时重复应用程序初始化，
             // 只需确保窗口处于活动状态
-            if (!(Window.Current.Content is FrameEx rootFrame))
+            if (!(Window.Current.Content is ActivityContainer rootFrame))
             {
                 // 创建要充当导航上下文的框架，并导航到第一页
-                rootFrame = new FrameEx
+                rootFrame = new ActivityContainer
                 {
                     ActivityTransition = new AlphaAnimation()
                 };
@@ -80,7 +80,7 @@ namespace Sample
 
         private void RootFrameOnNavigated(object sender, EventArgs e)
         {
-            if (sender is FrameEx frame && frame.CanGoBack)
+            if (sender is ActivityContainer frame && frame.CanGoBack)
             {
                 SystemNavigationManager.GetForCurrentView().AppViewBackButtonVisibility =
                     AppViewBackButtonVisibility.Visible;

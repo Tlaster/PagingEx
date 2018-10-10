@@ -19,7 +19,7 @@ namespace PagingEx
 
         private string Key { get; }
 
-        internal Activity GetActivity(FrameEx frameEx)
+        internal Activity GetActivity(ActivityContainer activityContainer)
         {
             if (Activity != null)
             {
@@ -32,7 +32,7 @@ namespace PagingEx
                     $"The base type is not an {nameof(Activity)}. Change the base type from Activity to {nameof(Activity)}. ");
             }
 
-            activity.SetFrame(frameEx);
+            activity.SetContainer(activityContainer);
             activity.OnCreate(Parameter);
             Activity = activity;
 

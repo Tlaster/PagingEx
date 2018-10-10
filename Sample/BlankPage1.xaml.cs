@@ -31,7 +31,7 @@ namespace Sample
 
         private void ButtonBase_OnClick(object sender, RoutedEventArgs e)
         {
-            OpenPage(typeof(MainPage));
+            StartActivity(typeof(MainPage));
         }
 
         protected override void OnPrepareConnectedAnimation(ConnectedAnimationService service)

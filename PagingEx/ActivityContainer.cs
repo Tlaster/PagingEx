@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Windows.UI.Core;
 using Windows.UI.Xaml;
@@ -10,54 +8,45 @@ using Windows.UI.Xaml.Navigation;
 
 namespace PagingEx
 {
-    public class FrameEx : Control, INavigate
+    public class ActivityContainer : Control, INavigate
     {
-        public event EventHandler<EventArgs> Navigated;
-        public event EventHandler<EventArgs> Navigating;
-
         public static readonly DependencyProperty ContentProperty = DependencyProperty.Register(
-            nameof(Content), typeof(object), typeof(FrameEx), new PropertyMetadata(default));
+            nameof(Content), typeof(object), typeof(ActivityContainer), new PropertyMetadata(default));
 
         public static readonly DependencyProperty ContentTransitionsProperty = DependencyProperty.Register(
-            nameof(ContentTransitions), typeof(TransitionCollection), typeof(FrameEx),
+            nameof(ContentTransitions), typeof(TransitionCollection), typeof(ActivityContainer),
             new PropertyMetadata(default));
 
         public static readonly DependencyProperty SourceActivityTypeProperty = DependencyProperty.Register(
-            nameof(SourceActivityType), typeof(Type), typeof(FrameEx),
+            nameof(SourceActivityType), typeof(Type), typeof(ActivityContainer),
             new PropertyMetadata(default, OnSourceActivityTypeChanged));
 
         private readonly ActivityStackManager _activityStackManager = new ActivityStackManager();
 
-        public FrameEx()
+        public ActivityContainer()
         {
             HorizontalContentAlignment = HorizontalAlignment.Stretch;
             VerticalContentAlignment = VerticalAlignment.Stretch;
 
             HorizontalAlignment = HorizontalAlignment.Stretch;
             VerticalAlignment = VerticalAlignment.Stretch;
-            
-            Loaded += delegate
-            {
-                Window.Current.VisibilityChanged += OnVisibilityChanged;
-            };
-            Unloaded += delegate
-            {
-                Window.Current.VisibilityChanged -= OnVisibilityChanged;
-            };
 
-            DefaultStyleKey = typeof(FrameEx);
+            Loaded += delegate { Window.Current.VisibilityChanged += OnVisibilityChanged; };
+            Unloaded += delegate { Window.Current.VisibilityChanged -= OnVisibilityChanged; };
+
+            DefaultStyleKey = typeof(ActivityContainer);
         }
 
         public bool DisableCache { get; set; }
 
-        public ContentPresenter InternalFrame { get; private set; }
+        public ContentPresenter InternalContentPresenter { get; private set; }
 
         private ActivityModel CurrentActivityModel => _activityStackManager?.CurrentActivity;
 
         public Activity CurrentActivity => _activityStackManager?.CurrentActivity?.GetActivity(this);
 
         public bool CanGoBack => _activityStackManager.CanGoBack;
-        
+
         public int BackStackDepth => _activityStackManager.BackStackDepth;
 
         public bool IsNavigating { get; private set; }
@@ -72,7 +61,9 @@ namespace PagingEx
                     return null;
 
                 var currentActivity = CurrentActivity;
-                return currentActivity?.ActivityTransition != null ? CurrentActivity.ActivityTransition : ActivityTransition;
+                return currentActivity?.ActivityTransition != null
+                    ? CurrentActivity.ActivityTransition
+                    : ActivityTransition;
             }
         }
 
@@ -82,11 +73,10 @@ namespace PagingEx
             {
                 if (Content == null)
                     Content = new Grid();
-                return (Grid)Content;
+                return (Grid) Content;
             }
         }
-
-
+        
         public object Content
         {
             get => GetValue(ContentProperty);
@@ -104,7 +94,16 @@ namespace PagingEx
             get => (Type) GetValue(SourceActivityTypeProperty);
             set => SetValue(SourceActivityTypeProperty, value);
         }
-        
+
+        public bool Navigate(Type sourceActivityType)
+        {
+            Navigate(sourceActivityType, null);
+            return true;
+        }
+
+        public event EventHandler<EventArgs> Navigated;
+        public event EventHandler<EventArgs> Navigating;
+
         public Task<bool> GoHome()
         {
             return GoBackTo(0);
@@ -146,12 +145,6 @@ namespace PagingEx
         {
             Navigate(homeActivityType, parameter);
         }
-        
-        public bool Navigate(Type sourceActivityType)
-        {
-            Navigate(sourceActivityType, null);
-            return true;
-        }
 
         public Task<bool> Navigate(Type activityType, object parameter)
         {
@@ -162,7 +155,7 @@ namespace PagingEx
         private static void OnSourceActivityTypeChanged(DependencyObject dependencyObject,
             DependencyPropertyChangedEventArgs e)
         {
-            (dependencyObject as FrameEx)?.OnSourceActivityTypeChanged(e.NewValue as Type);
+            (dependencyObject as ActivityContainer)?.OnSourceActivityTypeChanged(e.NewValue as Type);
         }
 
         private void OnSourceActivityTypeChanged(Type newValue)
@@ -178,7 +171,7 @@ namespace PagingEx
         protected override void OnApplyTemplate()
         {
             base.OnApplyTemplate();
-            InternalFrame = (ContentPresenter) GetTemplateChild(nameof(FrameEx));
+            InternalContentPresenter = (ContentPresenter) GetTemplateChild(nameof(ActivityContainer));
         }
 
         private Task<bool> NavigateWithMode(ActivityModel newActivity, NavigationMode navigationMode)
@@ -227,7 +220,7 @@ namespace PagingEx
             }
             else
             {
-                throw new InvalidOperationException("The frameEx cannot go back");
+                throw new InvalidOperationException($"The {nameof(ActivityContainer)} cannot go back");
             }
         }
 
@@ -237,7 +230,7 @@ namespace PagingEx
             if (Content is FrameworkElement element) element.IsHitTestVisible = false;
 
             InvokeLifecycleBeforeContentChanged(navigationMode, currentActivity, nextActivity);
-            
+
             _activityStackManager.ChangeCurrentActivity(nextActivity, nextIndex);
 
             OnCurrentActivityChanged(currentActivity?.Activity, nextActivity?.Activity);
@@ -245,7 +238,7 @@ namespace PagingEx
             Navigating?.Invoke(this, EventArgs.Empty);
 
             await UpdateContent(navigationMode, currentActivity, nextActivity);
-            
+
             InvokeLifecycleAfterContentChanged(navigationMode, currentActivity, nextActivity);
 
             if (Content is FrameworkElement frameworkElement) frameworkElement.IsHitTestVisible = true;
@@ -254,8 +247,9 @@ namespace PagingEx
 
             Navigated?.Invoke(this, EventArgs.Empty);
         }
-        
-        private async Task UpdateContent(NavigationMode navigationMode, ActivityModel currentActivity, ActivityModel nextActivity)
+
+        private async Task UpdateContent(NavigationMode navigationMode, ActivityModel currentActivity,
+            ActivityModel nextActivity)
         {
             var animation = ActualActivityTransition;
             var current = currentActivity?.GetActivity(this)?.InternalPage;
@@ -281,6 +275,7 @@ namespace PagingEx
                             default:
                                 throw new ArgumentOutOfRangeException(nameof(navigationMode), navigationMode, null);
                         }
+
                         break;
                     case ActivityInsertionMode.NewBelow:
                         switch (navigationMode)
@@ -298,6 +293,7 @@ namespace PagingEx
                             default:
                                 throw new ArgumentOutOfRangeException(nameof(navigationMode), navigationMode, null);
                         }
+
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
@@ -307,10 +303,7 @@ namespace PagingEx
             }
             else
             {
-                if (current != null)
-                {
-                    ContentRoot.Children.Remove(current);
-                }
+                if (current != null) ContentRoot.Children.Remove(current);
 
                 ContentRoot.Children.Add(next);
             }
@@ -362,7 +355,8 @@ namespace PagingEx
 
         private void ReleaseActivity(ActivityModel activity)
         {
-            if (activity != null && (activity.Activity.NavigationCacheMode == NavigationCacheMode.Disabled || DisableCache))
+            if (activity != null &&
+                (activity.Activity.NavigationCacheMode == NavigationCacheMode.Disabled || DisableCache))
                 activity.Release();
         }
 
@@ -373,13 +367,9 @@ namespace PagingEx
         private void OnVisibilityChanged(object sender, VisibilityChangedEventArgs args)
         {
             if (args.Visible)
-            {
                 CurrentActivity?.OnResume();
-            }
             else
-            {
                 CurrentActivity?.OnPause();
-            }
         }
     }
 }

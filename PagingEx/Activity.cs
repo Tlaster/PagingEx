@@ -9,9 +9,6 @@ namespace PagingEx
 {
     public class Activity : ContentControl
     {
-        public static readonly DependencyProperty IsBusyProperty = DependencyProperty.Register(
-            nameof(IsBusy), typeof(bool), typeof(Activity), new PropertyMetadata(default));
-
         public static readonly DependencyProperty TopAppBarProperty =
             DependencyProperty.Register(nameof(TopAppBar), typeof(AppBar), typeof(Activity),
                 new PropertyMetadata(default(AppBar), (o, args) => ((Activity) o).OnUpdateTopAppBar()));
@@ -33,16 +30,10 @@ namespace PagingEx
             VerticalAlignment = VerticalAlignment.Stretch;
         }
 
-        protected FrameEx Frame { get; private set; }
+        protected ActivityContainer Container { get; private set; }
 
         public IActivityTransition ActivityTransition { get; set; }
-
-        public bool IsBusy
-        {
-            get => (bool) GetValue(IsBusyProperty);
-            set => SetValue(IsBusyProperty, value);
-        }
-
+        
         public Page InternalPage => _internalPage ?? (_internalPage = new Page {Content = this});
 
         public NavigationCacheMode NavigationCacheMode { get; set; }
@@ -59,9 +50,9 @@ namespace PagingEx
             set => SetValue(BottomAppBarProperty, value);
         }
 
-        protected internal virtual void SetFrame(FrameEx frameEx)
+        protected internal virtual void SetContainer(ActivityContainer activityContainer)
         {
-            Frame = frameEx;
+            Container = activityContainer;
         }
 
         protected override void OnApplyTemplate()
@@ -114,15 +105,20 @@ namespace PagingEx
 
         protected void Finish()
         {
-            if (Frame.CanGoBack)
-                Frame.GoBack();
-            else
-                Window.Current.Close();
+            if (Container.CanGoBack)
+            {
+                Container.GoBack();
+            }
         }
 
-        protected void OpenPage(Type type, object parameter = null)
+        protected void StartActivity(Type type, object parameter = null)
         {
-            Frame.Navigate(type, parameter);
+            Container.Navigate(type, parameter);
+        }
+
+        protected void StartActivity<T>(object parameter = null) where T : Activity
+        {
+            StartActivity(typeof(T), parameter);
         }
 
         protected internal virtual void OnCreate(object parameter)

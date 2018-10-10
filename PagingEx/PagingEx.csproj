@@ -116,7 +116,7 @@
   <ItemGroup>
     <Compile Include="IActivityTransition.cs" />
     <Compile Include="ActivityStackManager.cs" />
-    <Compile Include="FrameEx.cs" />
+    <Compile Include="ActivityContainer.cs" />
     <Compile Include="Activity.cs" />
     <Compile Include="ActivityModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

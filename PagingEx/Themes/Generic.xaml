@@ -3,11 +3,11 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:pagingEx="using:PagingEx">
 
-    <Style TargetType="pagingEx:FrameEx">
+    <Style TargetType="pagingEx:ActivityContainer">
         <Setter Property="Template">
             <Setter.Value>
-                <ControlTemplate TargetType="pagingEx:FrameEx">
-                    <ContentPresenter x:Name="Frame" Background="{TemplateBinding Background}"
+                <ControlTemplate TargetType="pagingEx:ActivityContainer">
+                    <ContentPresenter x:Name="InternalContentPresenter" Background="{TemplateBinding Background}"
                                       Content="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Content}"
                                       ContentTransitions="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=ContentTransitions}" />
                 </ControlTemplate>
