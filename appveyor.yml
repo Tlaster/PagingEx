@@ -1,0 +1,14 @@
+version: 2.0.{build}
+image: Visual Studio 2017
+configuration: Release
+before_build:
+- ps: nuget restore
+build:
+  project: PagingEx\PagingEx.csproj
+  parallel: true
+  verbosity: minimal
+before_package:
+- ps: nuget pack PagingEx\PagingEx.nuspec -Version $env:appveyor_build_version
+artifacts:
+- path: '*.nupkg'
+  name: nuget
